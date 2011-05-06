@@ -10,6 +10,7 @@
  * @since Cuploadify v 1.0
  * @license http://www.opensource.org/licenses/mit-license.php The MIT License
  */
+APP::import('Component','Cuploadify.Uuid');
 class CuploadifyComponent extends Object {
     /**
      * The instantiating controller.
@@ -28,6 +29,7 @@ class CuploadifyComponent extends Object {
      */
     function initialize(&$controller, $settings=array()) {
         $this->controller = $controller;
+        $this->Uuid = new UuidComponent();
         CakeLog::write("debug", "initializing cuploadify component..."); 
         if (isset($_REQUEST["session_id"])) {
             CakeLog::write("debug", "session found.."); 
@@ -45,6 +47,7 @@ class CuploadifyComponent extends Object {
     function upload($options = array()) {
         if (!empty($_FILES)) { 
             $file_data = isset($_REQUEST["fileDataName"]) ? $_REQUEST["fileDataName"] : "Filedata";
+            $file_path = isset($_REQUEST["folder"]) ? $_REQUEST["folder"] : "/img/";
             $temp_file = $_FILES[$file_data]['tmp_name'];
             
             $target_path = $this->get_target_folder($options);
@@ -55,10 +58,9 @@ class CuploadifyComponent extends Object {
                 mkdir($target_path, 0777, true); 
                 umask($old);
             }
-
-            $filename_prefix = isset($options["filename_prefix"]) ? $options["filename_prefix"] : "";
-
-            $target_file =  str_replace('//','/',$target_path) . "/$filename_prefix" . $_FILES[$file_data]['name'];
+            $ext = substr($_FILES['Filedata']['name'], strrpos($_FILES['Filedata']['name'], '.') + 1);
+            $filename = $this->Uuid->generate() . '.' . $ext;
+            $target_file =  str_replace('//','/',$target_path) . $filename;
 
             // $fileTypes  = str_replace('*.','',$_REQUEST['fileext']);
             // $fileTypes  = str_replace(';','|',$fileTypes);
@@ -69,22 +71,22 @@ class CuploadifyComponent extends Object {
                 // Uncomment the following line if you want to make the directory if it doesn't exist
                 // mkdir(str_replace('//','/',$target_path), 0755, true);
                 
-                $success = move_uploaded_file($temp_file,$target_file);
-
-                return $success ? $target_file : $success;
+                move_uploaded_file($temp_file,$target_file);
                 //echo str_replace($_SERVER['DOCUMENT_ROOT'],'',$target_file);
             // } else {
             //  echo 'Invalid file type.';
             // }
+            return array('filename'=>$filename,'path'=>$file_path,'filePath'=> $file_path . '/' . $filename , 'ext' => $ext, 'origFilename' => $_FILES['Filedata']['name']);
         }
     }
 
     function get_target_folder($options=array()) {
-        return $this->get_doc_root($options) . $_REQUEST["folder"];
+        $doc_root = $this->get_doc_root($options);
+        return $doc_root . '/';
     }
 
     function get_doc_root($options=array()) {
-        $doc_root = !isset($options["doc_root_relative"]) || $options["doc_root_relative"] ? $this->remove_trailing_slash(env('DOCUMENT_ROOT')) : "";
+        $doc_root = $this->remove_trailing_slash(env('DOCUMENT_ROOT'));
         if (isset($options["root"]) && strlen(trim($options["root"])) > 0) {
             $root = $this->remove_trailing_slash($options["root"]);
             $doc_root .=  $root;

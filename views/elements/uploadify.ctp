@@ -49,5 +49,5 @@ $(document).ready(function() {
     });
 });
 </script>
-
 <input id="<?php echo $dom_id; ?>" name="<?php echo $dom_id; ?>" type="file" />
+<div id="uploaded_media"></div>
